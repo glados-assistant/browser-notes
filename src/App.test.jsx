@@ -136,6 +136,29 @@ describe('Browser Notes application', () => {
     expect(repository.commit).not.toHaveBeenCalled()
   })
 
+  it('keeps a startup blocking error visible when starting another draft', async () => {
+    const user = userEvent.setup()
+    const repository = { load: () => ({ ok: false, code: 'corrupt' }), commit: vi.fn() }
+    renderApp({ repository })
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/invalid or corrupted/i)
+    expect(editor().save).toBeDisabled()
+  })
+
+  it.each(['corrupt', 'unsupported', 'conflict'])('blocks further mutations after a %s commit result', async (code) => {
+    const user = userEvent.setup()
+    const repository = {
+      load: () => ({ ok: true, notes: [FIRST], token: 'before' }),
+      commit: vi.fn(() => ({ ok: false, code })),
+    }
+    renderApp({ repository })
+    await user.type(editor().body, ' dirty')
+    await user.click(editor().save)
+    expect(editor().save).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete note' })).toBeDisabled()
+    expect(repository.commit).toHaveBeenCalledTimes(1)
+  })
+
   it('installs a beforeunload guard only for a dirty draft', async () => {
     const user = userEvent.setup()
     renderApp({ notes: [FIRST] })

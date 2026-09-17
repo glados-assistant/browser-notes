@@ -5,6 +5,8 @@ import StorageNotice from './components/StorageNotice.jsx'
 import { deleteNote, orderNotes, saveDraft } from './lib/noteModel.js'
 import { createNoteStorage } from './lib/noteStorage.js'
 
+const BLOCKING_CODES = new Set(['corrupt', 'unsupported', 'conflict'])
+
 function browserNewId() {
   if (!globalThis.crypto || typeof globalThis.crypto.randomUUID !== 'function') throw new Error('randomUUID unavailable')
   return globalThis.crypto.randomUUID()
@@ -89,7 +91,8 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     const draft = draftFrom(note)
     setState((current) => ({
       ...current, selectedId: id, draft, baseline: baselineFrom(draft),
-      operationError: null, status: '', focusRevision: current.focusRevision + 1,
+      operationError: current.storageState === 'blocked' ? current.operationError : null,
+      status: '', focusRevision: current.focusRevision + 1,
     }))
   }
 
@@ -98,7 +101,8 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     const blank = blankDraft(newId)
     setState((current) => ({
       ...current, selectedId: null, draft: blank.draft, baseline: { title: '', body: '' },
-      operationError: blank.error, status: '', focusRevision: current.focusRevision + 1,
+      operationError: current.storageState === 'blocked' ? current.operationError : blank.error,
+      status: '', focusRevision: current.focusRevision + 1,
     }))
   }
 
@@ -118,7 +122,12 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     }
     const committed = repository.commit(candidate.notes, state.storageToken)
     if (!committed.ok) {
-      setState((current) => ({ ...current, operationError: committed.code, status: '' }))
+      setState((current) => ({
+        ...current,
+        storageState: BLOCKING_CODES.has(committed.code) ? 'blocked' : current.storageState,
+        operationError: committed.code,
+        status: '',
+      }))
       return
     }
     const savedDraft = draftFrom(candidate.note)
@@ -137,7 +146,12 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     const candidate = deleteNote(state.persistedNotes, state.selectedId)
     const committed = repository.commit(candidate, state.storageToken)
     if (!committed.ok) {
-      setState((current) => ({ ...current, operationError: committed.code, status: '' }))
+      setState((current) => ({
+        ...current,
+        storageState: BLOCKING_CODES.has(committed.code) ? 'blocked' : current.storageState,
+        operationError: committed.code,
+        status: '',
+      }))
       return
     }
     const next = candidate[0]

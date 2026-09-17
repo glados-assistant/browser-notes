@@ -69,5 +69,7 @@ test('an exact-token conflict keeps the draft and external bytes', async ({ page
   await page.getByRole('button', { name: 'Save note' }).click()
   await expect(page.getByRole('alert')).toContainText(/another tab/i)
   await expect(page.getByRole('textbox', { name: 'Body' })).toHaveValue('my draft')
+  await expect(page.getByRole('button', { name: 'Save note' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Delete note' })).toBeDisabled()
   expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(external)
 })
