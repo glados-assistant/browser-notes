@@ -4,8 +4,8 @@ Verified at 2026-09-17T09:32:50Z in the assigned Debian 13 container.
 
 ## Candidate under test
 
-- Tested source commit: `d4024d2846d3a0ac86d89fccfa7dc4be585c8ced`
-- Tested source tree: `677decb1722dd85c621b31947e92c515a34ae91f`
+- Tested source commit: `39941da9baa05324747e39dee67a7844de57ea0a`
+- Tested source tree: `447111e2872b0602ef09be6d66ceb5d8e575a187`
 - Runtime: Node `v24.21.0`, npm `11.19.0`
 - Lockfile: npm lockfileVersion 3
 - Direct dependency resolution: all exact pins in `package.json`; `npm ls --depth=0` resolved one copy of each direct package, including `eslint@10.10.0` with `@eslint/js@10.0.1`
@@ -23,11 +23,11 @@ This report is the only file added after the tested source commit. The final han
 | RED: `npm test` before model/storage implementation | 1 expected | Both suites failed because `noteModel.js` and `noteStorage.js` did not exist. |
 | GREEN: `npm test` after model/storage implementation | 0 | 21 model/storage tests passed. |
 | RED: `npx vitest run src/App.test.jsx` before UI implementation | 1 expected | Failed because `App.jsx` did not exist. |
-| GREEN: `npm test` after UI implementation | 0 | 29 unit/integration tests passed. |
+| GREEN: `npm test` after UI implementation | 0 | 29 unit/integration tests passed before independent review; review-driven blocking-state regressions increased the final count to 33. |
 | `./node_modules/.bin/playwright install chromium firefox webkit` | 0 | Chromium 153, Firefox 155, and WebKit 26.6 bundles downloaded. Playwright reported missing host libraries. |
 | final clean `npm ci` | 0 | 219 packages installed from lockfile; 0 reported vulnerabilities. |
 | final `npm run lint` | 0 | No ESLint findings. |
-| final `npm test` | 0 | 3 files, 29 tests passed. |
+| final `npm test` | 0 | 3 files, 33 tests passed. |
 | final `npm run build` | 0 | Vite 8.3.0 production build passed; 21 modules transformed. |
 | `npm run test:e2e -- --project=chromium` with the local Playwright browser path and locally extracted Debian libraries | 0 | 11/11 Chromium tests passed against Vite preview. |
 | full `npm run test:e2e` with all three configured projects | 1 | 11 Chromium tests passed; 11 Firefox and 11 WebKit tests could not start in this container. Firefox reported user-namespace `EPERM` and profile startup failure. WebKit launched but closed before opening a page. |
