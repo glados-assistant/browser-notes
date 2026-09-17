@@ -25,14 +25,43 @@ async function installWriteFailure(page, raw = RAW, errorName = 'QuotaExceededEr
   }, { key: KEY, seeded: raw, name: errorName })
 }
 
-test('corrupt and unsupported storage remain byte-for-byte unchanged', async ({ page }) => {
+test('corrupt and unsupported startup stay editable without showing a fictional empty collection', async ({ page }) => {
   for (const [raw, message] of [['{bad', /invalid or corrupted/i], ['{"version":2,"notes":[]}', /unsupported version/i]]) {
     await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: KEY, value: raw })
     await page.goto('/')
     await expect(page.getByRole('alert')).toContainText(message)
+    await expect(page.getByText(/no saved notes yet/i)).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Title' })).toBeEditable()
+    await expect(page.getByRole('textbox', { name: 'Body' })).toBeEditable()
+    await page.getByRole('textbox', { name: 'Title' }).fill('Unsaved draft')
+    await page.getByRole('textbox', { name: 'Body' }).fill('still editable')
     await expect(page.getByRole('button', { name: 'Save note' })).toBeDisabled()
     expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(raw)
   }
+})
+
+test('denied startup stays editable without showing a fictional empty collection or changing bytes', async ({ page }) => {
+  await page.addInitScript(({ key, raw }) => {
+    const storage = window.localStorage
+    Storage.prototype.setItem.call(storage, key, raw)
+    Storage.prototype.setItem.call(storage, 'unrelated', 'keep')
+    window.__readOriginalStorage = (storageKey) => Storage.prototype.getItem.call(storage, storageKey)
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() { throw new DOMException('injected denial', 'SecurityError') },
+    })
+  }, { key: KEY, raw: RAW })
+
+  await page.goto('/')
+  await expect(page.getByRole('alert')).toContainText(/storage is unavailable/i)
+  await expect(page.getByText(/no saved notes yet/i)).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Title' })).toBeEditable()
+  await expect(page.getByRole('textbox', { name: 'Body' })).toBeEditable()
+  await page.getByRole('textbox', { name: 'Title' }).fill('Unsaved draft')
+  await page.getByRole('textbox', { name: 'Body' }).fill('still editable')
+  await expect(page.getByRole('button', { name: 'Save note' })).toBeDisabled()
+  expect(await page.evaluate((key) => window.__readOriginalStorage(key), KEY)).toBe(RAW)
+  expect(await page.evaluate(() => window.__readOriginalStorage('unrelated'))).toBe('keep')
 })
 
 test('quota failure retains a new draft and never reports success', async ({ page }) => {

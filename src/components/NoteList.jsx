@@ -1,11 +1,13 @@
-export default function NoteList({ notes, selectedId, onOpen, onNew }) {
+export default function NoteList({ notes, selectedId, blocked, onOpen, onNew }) {
   return (
     <section className="notes-panel" aria-labelledby="notes-heading">
       <div className="panel-heading">
         <h2 id="notes-heading">Notes</h2>
         <button type="button" onClick={onNew}>New note</button>
       </div>
-      {notes.length === 0 ? (
+      {blocked ? (
+        <p className="blocked-state">Saved notes are unavailable while browser storage cannot be read.</p>
+      ) : notes.length === 0 ? (
         <p className="empty-state">No saved notes yet. Create one, add a title, and select Save note.</p>
       ) : (
         <ul className="note-list">

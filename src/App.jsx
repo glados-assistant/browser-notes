@@ -169,7 +169,13 @@ export default function App({ repository = createNoteStorage(), now = () => new 
       <header><h1>Browser Notes</h1><p>Plain-text notes saved only in this browser.</p></header>
       <StorageNotice error={state.operationError} status={state.status} />
       <main>
-        <NoteList notes={state.persistedNotes} selectedId={state.selectedId} onOpen={openNote} onNew={startNew} />
+        <NoteList
+          notes={state.persistedNotes}
+          selectedId={state.selectedId}
+          blocked={state.storageState === 'blocked'}
+          onOpen={openNote}
+          onNew={startNew}
+        />
         <NoteEditor
           ref={titleRef}
           draft={state.draft}

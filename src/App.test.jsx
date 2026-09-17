@@ -125,15 +125,35 @@ describe('Browser Notes application', () => {
     confirm.mockRestore()
   })
 
-  it('blocks persistence after a load error while preserving typed text', async () => {
+  it.each([
+    ['denied', null, true, /storage is unavailable/i],
+    ['corrupt', '{bad', false, /invalid or corrupted/i],
+    ['unsupported', '{"version":2,"notes":[]}', false, /unsupported version/i],
+  ])('renders blocked %s storage without a fictional empty collection', async (_scenario, raw, denyRead, message) => {
     const user = userEvent.setup()
-    const repository = { load: () => ({ ok: false, code: 'corrupt' }), commit: vi.fn() }
+    let value = raw
+    const storage = {
+      getItem: vi.fn(() => {
+        if (denyRead) throw new DOMException('denied', 'SecurityError')
+        return value
+      }),
+      setItem: vi.fn((_key, next) => { value = next }),
+    }
+    const repository = createNoteStorage(() => storage)
+
     renderApp({ repository })
-    expect(screen.getByRole('alert')).toHaveTextContent(/invalid or corrupted/i)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message)
+    expect(screen.queryByText(/no saved notes yet/i)).not.toBeInTheDocument()
+    expect(editor().title).toBeEnabled()
+    expect(editor().body).toBeEnabled()
     expect(editor().save).toBeDisabled()
+    await user.type(editor().title, 'Draft title')
     await user.type(editor().body, 'still editable')
+    expect(editor().title).toHaveValue('Draft title')
     expect(editor().body).toHaveValue('still editable')
-    expect(repository.commit).not.toHaveBeenCalled()
+    expect(value).toBe(raw)
+    expect(storage.setItem).not.toHaveBeenCalled()
   })
 
   it('keeps a startup blocking error visible when starting another draft', async () => {
