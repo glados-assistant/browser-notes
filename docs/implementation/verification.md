@@ -1,16 +1,16 @@
 # Engineer verification
 
-Verified at 2026-09-17T09:32:50Z in the assigned Debian 13 container.
+Initial implementation verified at 2026-09-17T09:32:50Z and R1-01 rework reverified at 2026-09-17T19:16:23Z in the assigned Debian 13 container.
 
 ## Candidate under test
 
-- Tested source commit: `39941da9baa05324747e39dee67a7844de57ea0a`
-- Tested source tree: `447111e2872b0602ef09be6d66ceb5d8e575a187`
+- Tested R1-01 source commit: `38f55f82525497b9908351083c1018f6aa4c4e04`
+- Tested R1-01 source tree: `3c789c15931b23bc99ae3d71fd95d240619409d7`
 - Runtime: Node `v24.21.0`, npm `11.19.0`
 - Lockfile: npm lockfileVersion 3
 - Direct dependency resolution: all exact pins in `package.json`; `npm ls --depth=0` resolved one copy of each direct package, including `eslint@10.10.0` with `@eslint/js@10.0.1`
 
-This report is the only file added after the tested source commit. The final handoff records the containing documentation commit and its tree.
+This report is the only file changed after the tested R1-01 source commit. The final handoff records the containing documentation commit and its tree.
 
 ## Commands and outcomes
 
@@ -25,12 +25,15 @@ This report is the only file added after the tested source commit. The final han
 | RED: `npx vitest run src/App.test.jsx` before UI implementation | 1 expected | Failed because `App.jsx` did not exist. |
 | GREEN: `npm test` after UI implementation | 0 | 29 unit/integration tests passed before independent review; review-driven blocking-state regressions increased the final count to 33. |
 | `./node_modules/.bin/playwright install chromium firefox webkit` | 0 | Chromium 153, Firefox 155, and WebKit 26.6 bundles downloaded. Playwright reported missing host libraries. |
+| R1-01 RED: `npm test -- src/App.test.jsx -t "renders blocked"` | 1 expected | All three denied/corrupt/unsupported cases failed because ordinary `No saved notes yet` wording was still present. |
+| R1-01 GREEN: `npm test -- src/App.test.jsx -t "renders blocked"` | 0 | All 3 blocked-startup regression cases passed. |
 | final clean `npm ci` | 0 | 219 packages installed from lockfile; 0 reported vulnerabilities. |
 | final `npm run lint` | 0 | No ESLint findings. |
-| final `npm test` | 0 | 3 files, 33 tests passed. |
+| final `npm test` | 0 | 3 files, 35 tests passed. |
 | final `npm run build` | 0 | Vite 8.3.0 production build passed; 21 modules transformed. |
-| `npm run test:e2e -- --project=chromium` with the local Playwright browser path and locally extracted Debian libraries | 0 | 11/11 Chromium tests passed against Vite preview. |
-| full `npm run test:e2e` with all three configured projects | 1 | 11 Chromium tests passed; 11 Firefox and 11 WebKit tests could not start in this container. Firefox reported user-namespace `EPERM` and profile startup failure. WebKit launched but closed before opening a page. |
+| `npm run test:e2e -- --project=chromium` with `PLAYWRIGHT_BROWSERS_PATH=/workspace/browser-notes-playwright` | 0 | 12/12 Chromium tests passed against the production Vite preview, including denied/corrupt/unsupported blocked-startup regressions. |
+| `npm run test:e2e -- --project=firefox` with the same browser path | 1 | 12/12 cases could not start because required host libraries were unavailable; no Firefox application pass is claimed. |
+| `npm run test:e2e -- --project=webkit` with the same browser path | 1 | 12/12 cases could not start because required host libraries were unavailable; no WebKit application pass is claimed. |
 | `git diff --check` before the source commit | 0 | No whitespace errors. |
 
 No line/branch coverage percentage is claimed because the approved dependency set does not include a Vitest coverage provider. Behavioral coverage is recorded below.
@@ -45,12 +48,13 @@ No line/branch coverage percentage is claimed because the approved dependency se
 - Conditional `beforeunload` registration in jsdom. Browser-controlled prompt wording/suppression is not claimed.
 - Reload persistence, two-note isolation, literal HTML/script-like content, absence of execution, keyboard-only creation, selected state, mobile/desktop viewports, long unbroken titles, and 200% CSS zoom in real Chromium.
 - StrictMode initialization performs no storage write.
+- Denied, corrupt and unsupported startup render a distinct unavailable-list state rather than the ordinary empty-collection message; title/body drafting remains enabled, mutation controls remain disabled, and stored bytes remain unchanged.
 
 ## Limitations and environment evidence
 
 The container runs as uid 1001 and cannot install host packages globally. Browser bundles were downloaded to `/workspace/browser-notes-playwright`. Debian packages were downloaded and extracted without root to `/workspace/browser-notes-sysroot`, and browser binaries were given local runtime search paths so Chromium could be exercised. Those environment-only directories are outside the repository and are not part of the handoff.
 
-Firefox remained blocked by the container's disabled user namespaces (`CanCreateUserNamespace() clone() failure: EPERM`) and then could not initialize its temporary profile. Disabling Firefox content/GMP/RDD sandbox environment switches did not resolve it. WebKit resolved its libraries after the local extraction but its WPE process closed before `browserContext.newPage`. The full run therefore correctly exits nonzero: 11 passed, 22 environment-startup failures. No Firefox/WebKit application behavior is claimed by the Engineer. Independent review/QA must run those projects in a browser-capable environment before cross-browser acceptance.
+The R1-01 rework attempts used the downloaded Playwright browsers without modifying host library loading. Firefox reported missing X11/GTK/audio/DBus libraries and WebKit reported missing GTK4/GStreamer/graphics/media libraries, so each 12-test project exited nonzero before application execution. No Firefox/WebKit application behavior is claimed by the Engineer. Independent review/QA must run those projects in a browser-capable environment before cross-browser acceptance. Earlier implementation attempts with locally extracted libraries also remained environment-blocked as recorded in the prior candidate history.
 
 Viewport tests are emulation, not physical-device or real Safari certification. Multi-tab simultaneous writes remain unsupported by design; only exact-token conflict detection is tested. localStorage remains synchronous, quota-limited, origin-specific, and unencrypted.
 
