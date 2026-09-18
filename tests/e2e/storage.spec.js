@@ -73,6 +73,7 @@ test('quota failure retains a new draft and never reports success', async ({ pag
   await expect(page.getByRole('alert')).toContainText(/storage is full/i)
   await expect(page.getByRole('status')).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Body' })).toHaveValue('keep this text')
+  await expect(page.getByRole('button', { name: 'Save note' })).toBeFocused()
   expect(await page.evaluate(() => localStorage.getItem('unrelated'))).toBe('keep')
 })
 
@@ -98,6 +99,26 @@ test('an exact-token conflict keeps the draft and external bytes', async ({ page
   await page.getByRole('button', { name: 'Save note' }).click()
   await expect(page.getByRole('alert')).toContainText(/another tab/i)
   await expect(page.getByRole('textbox', { name: 'Body' })).toHaveValue('my draft')
+  await expect(page.getByRole('button', { name: 'Save note' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Delete note' })).toBeDisabled()
+  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(external)
+})
+
+test('a delete conflict retains the visible list, selection, exact draft, and external bytes', async ({ page }) => {
+  await page.addInitScript(({ key, raw }) => localStorage.setItem(key, raw), { key: KEY, raw: RAW })
+  await page.goto('/')
+  await page.getByRole('textbox', { name: 'Body' }).fill('conflict delete draft')
+  const external = JSON.stringify({ version: 1, notes: [{ ...NOTE, body: 'external', updatedAt: '2026-09-17T09:00:00.000Z' }] })
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: KEY, value: external })
+  page.on('dialog', (dialog) => dialog.accept())
+
+  await page.getByRole('button', { name: 'Delete note' }).click()
+
+  await expect(page.getByRole('alert')).toContainText(/another tab/i)
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Body' })).toHaveValue('conflict delete draft')
+  await expect(page.getByRole('button', { name: /^Stored/ })).toHaveAttribute('aria-current', 'true')
+  await expect(page.getByText(/saved notes are unavailable/i)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Save note' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Delete note' })).toBeDisabled()
   expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(external)

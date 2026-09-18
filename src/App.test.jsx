@@ -63,6 +63,7 @@ describe('Browser Notes application', () => {
     await user.type(editor().title, '  Literal <script>alert(1)</script>  ')
     await user.click(editor().save)
     expect(screen.getByRole('status')).toHaveTextContent('Saved')
+    expect(editor().title).toHaveFocus()
     expect(storage.setItem).toHaveBeenCalledTimes(1)
     expect(JSON.parse(storage.value).notes[0]).toMatchObject({ title: '  Literal <script>alert(1)</script>  ', body: '' })
     expect(screen.getByRole('button', { name: /Literal <script>alert\(1\)<\/script>/ })).toBeInTheDocument()
@@ -80,6 +81,7 @@ describe('Browser Notes application', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/storage.*full/i)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(editor().body).toHaveValue('one unsaved')
+    expect(editor().save).toHaveFocus()
     expect(screen.getByRole('button', { name: /^First/ })).toHaveAttribute('aria-current', 'true')
   })
 
@@ -122,6 +124,30 @@ describe('Browser Notes application', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/could not be written/i)
     expect(editor().body).toHaveValue('two dirty')
     expect(screen.getByRole('button', { name: /^Second/ })).toHaveAttribute('aria-current', 'true')
+    confirm.mockRestore()
+  })
+
+  it('preserves the visible list, selection, and exact dirty draft after a delete conflict', async () => {
+    const user = userEvent.setup()
+    const repository = {
+      load: () => ({ ok: true, notes: [SECOND, FIRST], token: 'before' }),
+      commit: vi.fn(() => ({ ok: false, code: 'conflict' })),
+    }
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderApp({ repository })
+    await user.clear(editor().body)
+    await user.type(editor().body, 'conflict delete draft')
+
+    await user.click(screen.getByRole('button', { name: 'Delete note' }))
+
+    expect(repository.commit).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert')).toHaveTextContent(/another tab/i)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(editor().body).toHaveValue('conflict delete draft')
+    expect(screen.getByRole('button', { name: /^Second/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /^First/ })).toBeInTheDocument()
+    expect(editor().save).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete note' })).toBeDisabled()
     confirm.mockRestore()
   })
 

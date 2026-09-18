@@ -34,7 +34,7 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     if (!loaded.ok) {
       const blank = blankDraft(newId)
       return {
-        persistedNotes: [], storageToken: null, storageState: 'blocked', selectedId: null,
+        persistedNotes: [], storageToken: null, storageState: 'blocked', listUnavailable: true, selectedId: null,
         draft: blank.draft, baseline: { title: '', body: '' }, operationError: loaded.code,
         status: '', focusRevision: 0,
       }
@@ -43,13 +43,13 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     if (notes.length) {
       const draft = draftFrom(notes[0])
       return {
-        persistedNotes: notes, storageToken: loaded.token, storageState: 'ready', selectedId: notes[0].id,
+        persistedNotes: notes, storageToken: loaded.token, storageState: 'ready', listUnavailable: false, selectedId: notes[0].id,
         draft, baseline: baselineFrom(draft), operationError: null, status: '', focusRevision: 0,
       }
     }
     const blank = blankDraft(newId)
     return {
-      persistedNotes: [], storageToken: loaded.token, storageState: 'ready', selectedId: null,
+      persistedNotes: [], storageToken: loaded.token, storageState: 'ready', listUnavailable: false, selectedId: null,
       draft: blank.draft, baseline: { title: '', body: '' }, operationError: blank.error,
       status: '', focusRevision: 0,
     }
@@ -134,7 +134,7 @@ export default function App({ repository = createNoteStorage(), now = () => new 
     setState((current) => ({
       ...current, persistedNotes: candidate.notes, storageToken: committed.token,
       selectedId: candidate.note.id, draft: savedDraft, baseline: baselineFrom(savedDraft),
-      operationError: null, status: 'Saved',
+      operationError: null, status: 'Saved', focusRevision: current.focusRevision + 1,
     }))
   }
 
@@ -172,7 +172,7 @@ export default function App({ repository = createNoteStorage(), now = () => new 
         <NoteList
           notes={state.persistedNotes}
           selectedId={state.selectedId}
-          blocked={state.storageState === 'blocked'}
+          blocked={state.listUnavailable}
           onOpen={openNote}
           onNew={startNew}
         />
