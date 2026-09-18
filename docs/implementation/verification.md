@@ -1,6 +1,37 @@
 # Engineer verification
 
-Initial implementation verified at 2026-09-17T09:32:50Z and R1-01 rework reverified at 2026-09-17T19:16:23Z in the assigned Debian 13 container.
+Initial implementation verified at 2026-09-17T09:32:50Z and R1-01 rework reverified at 2026-09-17T19:16:23Z in the assigned Debian 13 container. QA-01 through QA-04 corrections were verified on 2026-09-18 with the approved runtime and all three browser engines.
+
+## QA-01 through QA-04 correction candidate
+
+- Prior reviewed candidate: `c401086e640e3e659e2f5eb971a98c670e2822d1` / tree `0100eda732a77d7fbd3ca45a12c17f811c5c2d45`
+- Tested correction source commit: `5eb34d0600fd7f1687a7c1b32dea52752137ad5b` / tree `94e79cdf177d8e617101b1d72fbdf57902881d1d`
+- Runtime: Node `v24.21.0`, npm `11.19.0`; the official Linux x64 archive matched SHA-256 `fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6`.
+- Scope: removed the zoom-amplified body minimum width; deliberately focused Title after successful Save; separated blocked-startup list rendering from mutation-blocked retained in-memory lists; committed Playwright `workers: 1` without removing, skipping, retrying, or narrowing any browser project/test.
+
+### TDD evidence
+
+| Cycle | RED | GREEN |
+| --- | --- | --- |
+| Successful Save focus | Focus regression failed: Title expected, disabled Save button focused. | Focus regression passed after successful saves incremented the existing focus revision. |
+| Conflict Delete visible state | Regression failed because the selected `Second` list button was absent and the blocked-startup message replaced the list. | Conflict Delete plus denied/corrupt/unsupported startup regressions passed (4 tests). |
+| 375x812 at 200% CSS zoom | Chromium production-browser regression measured `scrollWidth=640`, `clientWidth=375`. | Same regression passed after removing `body`'s `min-width: 320px`. |
+| Exact default E2E configuration | Config regression failed with `workers` undefined instead of `1`. | Config regression passed with all project names still exactly Chromium, Firefox, and WebKit. |
+
+### Correction verification commands and outcomes
+
+| Command | Exit | Outcome |
+| --- | ---: | --- |
+| selected `node --version`; `npm --version` | 0 | `v24.21.0`; `11.19.0` |
+| clean `npm ci` with writable external cache | 0 | 219 packages installed; 220 audited; 0 vulnerabilities |
+| `npm run lint` | 0 | No ESLint findings |
+| `npm test` | 0 | 4 files; 37/37 tests passed |
+| `npm run build` | 0 | Vite 8.3.0; 21 modules transformed |
+| targeted Chromium matrix: keyboard Save focus, failed-Save focus, conflict Delete, and 375x812/200% long-content reflow | 0 | 4/4 passed against production preview |
+| exact `npm run test:e2e` | 0 | 39/39 passed with committed one-worker default: Chromium 13, Firefox 13, WebKit 13; 3.5 minutes |
+| `git diff --check` before correction commit | 0 | No whitespace errors |
+
+The exact default browser command covered normal 375x812 and 1440x900 long-content conditions plus 375x812 at 200% CSS zoom in every project. It also covered successful Save focus, failed-Save focus retention, conflict Delete visible list/selection/draft/external-byte retention, and denied/corrupt/unsupported startup regressions. Viewports remain emulated rather than physical-device or real Safari certification. Browser-controlled beforeunload prompts and non-transactional multi-tab races retain the previously documented limitations. No QA report or evidence was edited, and no publication or deployment was performed.
 
 ## Candidate under test
 

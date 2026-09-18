@@ -27,7 +27,7 @@ Vite prints the loopback development URL. The app contains no remote assets or A
 - `npm run lint` — run ESLint
 - `npm test` — run Vitest unit and integration tests once
 - `npm run test:watch` — run Vitest in watch mode
-- `npm run test:e2e` — run Playwright against a production preview in Chromium, Firefox, and WebKit
+- `npm run test:e2e` — run Playwright against a production preview in Chromium, Firefox, and WebKit, serialized with the committed one-worker release-gate configuration
 
 Install Playwright browsers before the first end-to-end run:
 
